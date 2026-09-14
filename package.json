@@ -1,0 +1,28 @@
+{
+  "name": "cold-run",
+  "version": "1.0.0",
+  "description": "A URL-based tool tests a prototype or feature using an LLM browser agent with personas. It explores the product as a cold user, records interactions and screenshots, and returns UX and product-quality feedback from the perspective of a user in the target demographic.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test",
+    "check": "node --check src/server.js && node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://localhost:26831/kziechmann-MS/cold-run"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "playwright": "1.63.0"
+  },
+  "dependencies": {
+    "playwright": "^1.63.0"
+  }
+}
