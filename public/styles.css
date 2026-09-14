@@ -1,0 +1,49 @@
+:root { color-scheme: light; --ink: #17201d; --paper: #f3f1e9; --acid: #d9ff43; --line: #b8beb5; --muted: #58625d; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 ui-sans-serif, system-ui, sans-serif; }
+header, main, footer { width: min(1160px, calc(100% - 40px)); margin-inline: auto; }
+header { height: 74px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+.brand { color: inherit; font-size: 1.25rem; font-weight: 900; text-decoration: none; letter-spacing: -.04em; }
+.eyebrow, .kicker { text-transform: uppercase; letter-spacing: .12em; font-size: .72rem; font-weight: 800; }
+.hero { padding: 80px 0 58px; max-width: 960px; }
+h1 { max-width: 880px; margin: 12px 0 24px; font: 800 clamp(3.4rem, 8vw, 7.5rem)/.88 Georgia, serif; letter-spacing: -.07em; }
+h1 em { color: #526153; font-weight: inherit; }
+.lede { max-width: 680px; font-size: 1.2rem; color: var(--muted); }
+.workspace { padding: clamp(24px, 5vw, 60px); background: var(--ink); color: white; border-radius: 4px; box-shadow: 12px 12px 0 #aeb6aa; }
+.field { display: grid; gap: 7px; }
+label, legend { font-weight: 750; }
+input, textarea, select { width: 100%; border: 1px solid #69736d; border-radius: 2px; background: #f9faf6; padding: 13px; color: var(--ink); font: inherit; }
+input:focus, textarea:focus, select:focus, button:focus { outline: 3px solid var(--acid); outline-offset: 2px; }
+small, #status { color: #c5cdc7; }
+fieldset { border: 0; padding: 30px 0; margin: 0; }
+legend { margin-bottom: 12px; }
+.persona-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.persona { display: grid; align-content: start; gap: 8px; min-height: 170px; padding: 18px; border: 1px solid #5e6862; cursor: pointer; }
+.persona:has(input:checked) { color: var(--ink); background: var(--acid); border-color: var(--acid); }
+.persona input { width: auto; justify-self: end; accent-color: var(--ink); }
+.persona span { font-size: .86rem; opacity: .78; }
+.custom-fields { display: grid; grid-template-columns: 1fr 2fr 2fr; gap: 12px; padding-bottom: 28px; }
+.custom-fields[hidden] { display: none; }
+textarea { min-height: 100px; resize: vertical; }
+.run-row { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
+.run-row label { width: min(260px, 100%); }
+button { border: 0; background: var(--acid); color: var(--ink); padding: 16px 24px; font: 800 1rem inherit; cursor: pointer; }
+button:disabled { opacity: .5; cursor: wait; }
+.report { padding: 100px 0 40px; }
+.report-heading { display: flex; justify-content: space-between; gap: 20px; align-items: end; border-bottom: 1px solid var(--line); }
+h2 { margin: 8px 0 20px; font: 800 clamp(2rem, 5vw, 4.5rem)/1 Georgia, serif; letter-spacing: -.04em; }
+.sentiment, .severity { text-transform: uppercase; letter-spacing: .1em; font-size: .7rem; font-weight: 900; }
+.sentiment { margin-bottom: 24px; background: var(--acid); padding: 8px 12px; }
+.summary { max-width: 800px; margin: 30px 0 70px; font-size: 1.3rem; }
+.artifacts { margin: -50px 0 30px; }
+#recording { width: 100%; max-height: 650px; margin-bottom: 60px; background: #000; }
+.findings { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 70px; }
+.findings article { padding: 24px; border: 1px solid var(--line); background: #faf9f4; }
+.findings h4 { font-size: 1.3rem; }
+.severity.high { color: #a22918; }.severity.medium { color: #806000; }.severity.low { color: #376148; }
+.evidence { display: grid; gap: 18px; }
+.evidence article { display: grid; grid-template-columns: minmax(220px, 45%) 1fr; border-top: 1px solid var(--line); padding-top: 18px; gap: 24px; }
+.evidence img { width: 100%; max-height: 320px; object-fit: cover; object-position: top; border: 1px solid var(--line); }
+footer { margin-top: 70px; padding: 30px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: .85rem; }
+@media (max-width: 850px) { .persona-grid { grid-template-columns: 1fr 1fr; } .custom-fields, .findings { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .persona-grid, .evidence article { grid-template-columns: 1fr; } .run-row { align-items: stretch; flex-direction: column; } button { width: 100%; } .hero { padding-top: 48px; } }

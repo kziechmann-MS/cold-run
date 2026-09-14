@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Explore a product through a new user's eyes." />
+    <title>Cold Run — Persona-driven UX feedback</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="/">Cold Run</a>
+      <span class="eyebrow">AI UX fieldwork</span>
+    </header>
+    <main>
+      <section class="hero">
+        <p class="kicker">See what first-time users see</p>
+        <h1>Put your product through a <em>cold run.</em></h1>
+        <p class="lede">Send a persona-driven browser agent into any public product experience. Get the journey, visual evidence, and candid feedback—not another generic audit.</p>
+      </section>
+
+      <section class="workspace">
+        <form id="run-form">
+          <div class="field">
+            <label for="url">Product URL</label>
+            <input id="url" name="url" type="url" placeholder="https://your-product.example" required />
+            <small>Public HTTP and HTTPS pages only</small>
+          </div>
+          <fieldset>
+            <legend>Who is visiting?</legend>
+            <div id="personas" class="persona-grid" aria-live="polite"></div>
+          </fieldset>
+          <div id="custom-fields" class="custom-fields" hidden>
+            <div class="field"><label for="custom-name">Persona name</label><input id="custom-name" maxlength="80" /></div>
+            <div class="field"><label for="custom-description">Background</label><textarea id="custom-description" maxlength="500"></textarea></div>
+            <div class="field"><label for="custom-goals">Goals</label><textarea id="custom-goals" maxlength="500"></textarea></div>
+          </div>
+          <div class="run-row">
+            <label for="max-steps">Exploration depth
+              <select id="max-steps"><option value="4">Quick · 4 steps</option><option value="6" selected>Standard · 6 steps</option><option value="10">Deep · 10 steps</option></select>
+            </label>
+            <button type="submit">Start cold run <span aria-hidden="true">→</span></button>
+          </div>
+          <p id="status" role="status"></p>
+        </form>
+      </section>
+
+      <section id="report" class="report" hidden aria-live="polite">
+        <div class="report-heading">
+          <div><p class="kicker">Field report</p><h2 id="report-title"></h2></div>
+          <span id="sentiment" class="sentiment"></span>
+        </div>
+        <p id="summary" class="summary"></p>
+        <div id="artifacts" class="artifacts"></div>
+        <video id="recording" controls hidden></video>
+        <h3>Critical findings</h3>
+        <div id="findings" class="findings"></div>
+        <h3>Journey evidence</h3>
+        <div id="evidence" class="evidence"></div>
+      </section>
+    </main>
+    <footer>UX/product feedback only. No security testing, scraping, destructive actions, transactions, or real personal data.</footer>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
