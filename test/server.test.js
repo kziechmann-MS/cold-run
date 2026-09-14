@@ -23,4 +23,11 @@ test("serves personas and accepts run requests", async (context) => {
   assert.equal(response.status, 201);
   assert.equal((await response.json()).id, "run-1");
   assert.equal(received.personaId, personas[0].id);
+
+  const missing = await fetch(`${base}/favicon.ico`);
+  assert.equal(missing.status, 404);
+  assert.equal((await missing.json()).error, "Not found.");
+
+  const afterMissing = await fetch(`${base}/api/personas`);
+  assert.equal(afterMissing.status, 200);
 });

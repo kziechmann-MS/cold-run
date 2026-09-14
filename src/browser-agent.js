@@ -125,35 +125,68 @@ export async function runBrowserAgent({
   return { evidence, consoleIssues, errors, video: videoName };
 }
 
-async function observe(page) {
-  return page.evaluate(() => {
-    const clean = (value) => (value || "").replace(/\s+/g, " ").trim();
-    const candidates = Array.from(
-      document.querySelectorAll("a, button, input, textarea, select, [role='button'], [role='link']"),
-    ).filter((element) => {
-      const rect = element.getBoundingClientRect();
-      const style = getComputedStyle(element);
-      return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden";
-    }).slice(0, 60);
+export async function observe(page) {
+  return page.evaluate(collectPageObservation);
+}
 
-    const elements = candidates.map((element, index) => {
-      const ref = `e${index + 1}`;
-      element.setAttribute("data-cold-run-ref", ref);
-      return {
-        ref,
-        tag: element.tagName.toLowerCase(),
-        text: clean(element.innerText || element.value || element.getAttribute("aria-label") || element.placeholder).slice(0, 160),
-        type: element.getAttribute("type"),
-      };
-    });
+export function collectPageObservation(
+  documentRoot = document,
+  styleFor = getComputedStyle,
+  pageLocation = location,
+) {
+  const clean = (value) => (value || "").replace(/\s+/g, " ").trim();
+  const roots = [documentRoot];
+  const seenRoots = new Set(roots);
+  for (const root of roots) {
+    for (const element of root.querySelectorAll("*")) {
+      if (element.shadowRoot && !seenRoots.has(element.shadowRoot)) {
+        roots.push(element.shadowRoot);
+        seenRoots.add(element.shadowRoot);
+      }
+    }
+  }
+  const queryAll = (selector) => roots.flatMap((root) => Array.from(root.querySelectorAll(selector)));
+  const visible = (element) => {
+    const rect = element.getBoundingClientRect();
+    const style = styleFor(element);
+    return rect.width > 0
+      && rect.height > 0
+      && style.display !== "none"
+      && style.visibility !== "hidden";
+  };
+  const candidates = queryAll(
+    "a, button, input, textarea, select, [role='button'], [role='link']",
+  ).filter(visible).slice(0, 60);
+
+  const elements = candidates.map((element, index) => {
+    const ref = `e${index + 1}`;
+    element.setAttribute("data-cold-run-ref", ref);
     return {
-      title: document.title,
-      url: location.href,
-      headings: Array.from(document.querySelectorAll("h1, h2, h3")).slice(0, 20).map((el) => clean(el.innerText)),
-      text: clean(document.body?.innerText).slice(0, 6000),
-      elements,
+      ref,
+      tag: element.tagName.toLowerCase(),
+      text: clean(element.innerText || element.value || element.getAttribute("aria-label") || element.placeholder).slice(0, 160),
+      type: element.getAttribute("type"),
     };
   });
+  const textParts = [documentRoot.body?.innerText];
+  for (const root of roots.slice(1)) {
+    const rootText = Array.from(root.children)
+      .filter(visible)
+      .map((element) => clean(element.innerText))
+      .filter(Boolean)
+      .join(" ");
+    if (rootText) textParts.push(rootText);
+  }
+  return {
+    title: documentRoot.title,
+    url: pageLocation.href,
+    headings: queryAll("h1, h2, h3")
+      .filter(visible)
+      .slice(0, 20)
+      .map((element) => clean(element.innerText)),
+    text: clean([...new Set(textParts.filter(Boolean))].join(" ")).slice(0, 6000),
+    elements,
+  };
 }
 
 function summarizeObservation(observation) {

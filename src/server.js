@@ -21,16 +21,19 @@ export function createServer({ runService = runColdTest } = {}) {
         return json(response, 201, await runService(body));
       }
       if (request.method === "GET" && request.url.startsWith("/runs/")) {
-        return serveFile(response, safePath(runsDirectory, request.url.slice("/runs/".length)));
+        return await serveFile(response, safePath(runsDirectory, request.url.slice("/runs/".length)));
       }
       if (request.method === "GET") {
         const requestPath = request.url === "/" ? "index.html" : request.url.slice(1);
-        return serveFile(response, safePath(publicDirectory, requestPath));
+        return await serveFile(response, safePath(publicDirectory, requestPath));
       }
       return json(response, 404, { error: "Not found." });
     } catch (error) {
-      const status = error.code === "PAYLOAD_TOO_LARGE" ? 413 : 400;
-      return json(response, status, { error: error.message || "The request could not be completed." });
+      const notFound = error.code === "ENOENT";
+      const status = error.code === "PAYLOAD_TOO_LARGE" ? 413 : notFound ? 404 : 400;
+      return json(response, status, {
+        error: notFound ? "Not found." : error.message || "The request could not be completed.",
+      });
     }
   });
 }
@@ -44,7 +47,11 @@ function safePath(base, relative) {
 
 async function serveFile(response, filePath) {
   const details = await stat(filePath);
-  if (!details.isFile()) throw new Error("Not found.");
+  if (!details.isFile()) {
+    const error = new Error("Not found.");
+    error.code = "ENOENT";
+    throw error;
+  }
   const contentTypes = {
     ".css": "text/css; charset=utf-8",
     ".html": "text/html; charset=utf-8",
