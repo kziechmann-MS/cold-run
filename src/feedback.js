@@ -1,14 +1,42 @@
 import { personaPrompt } from "./llm.js";
 
 export async function generateFeedback({ llm, persona, url, evidence, consoleIssues }) {
+  const pageState = derivePageState(evidence);
   const result = await llm.complete(
     `${personaPrompt(persona)}
 You are now a rigorous UX researcher. Analyze only the supplied evidence. Return JSON with:
 {"summary":"2-3 sentences","sentiment":"positive|mixed|negative","findings":[{"severity":"high|medium|low","title":"concise","evidence":"specific step and observation","recommendation":"actionable change"}],"strengths":["specific strength"],"limitations":["coverage caveat"]}.
-Prioritize usability friction and product-quality issues. Do not invent facts.`,
-    JSON.stringify({ url, evidence, consoleIssues }),
+Prioritize usability friction and product-quality issues. Raw DOM observations are more reliable than the agent's interpretation. Only report an empty page or content-loading failure when pageState.emptySupported is true. Console errors are supporting evidence, not proof that visible content failed. Do not invent facts.`,
+    JSON.stringify({ url, pageState, evidence, consoleIssues }),
   );
-  return normalizeFeedback(result);
+  return enforceEvidenceConsistency(normalizeFeedback(result), pageState);
+}
+
+export function derivePageState(evidence) {
+  const observations = evidence.map((entry) => entry.rawObservation).filter(Boolean);
+  const meaningfulContentSeen = observations.some((observation) =>
+    observation.visibleTextLength >= 200
+    || observation.headings?.some((heading) => heading.length >= 10)
+    || observation.visibleInteractiveElementCount >= 2);
+  const emptySupported = observations.length >= 2 && observations.every((observation) =>
+    observation.visibleTextLength < 100
+    && !observation.headings?.some(Boolean)
+    && observation.visibleInteractiveElementCount === 0);
+  return { observations: observations.length, meaningfulContentSeen, emptySupported };
+}
+
+export function enforceEvidenceConsistency(feedback, pageState) {
+  if (!pageState.meaningfulContentSeen || pageState.emptySupported) return feedback;
+  const unsupportedLoadClaim = /\b(?:page|site|content|experience)\s+(?:is|was|remains?|appears?)?\s*(?:completely\s+)?(?:empty|blank)\b|\b(?:page|site|content|experience)\s+(?:failed|did not|was unable) to load\b|\b(?:page|content) loading failure\b|\bno (?:visible |meaningful )?(?:page )?content (?:loaded|appeared|was visible)\b/i;
+  const findings = feedback.findings.filter((finding) =>
+    !unsupportedLoadClaim.test(`${finding.title} ${finding.evidence}`));
+  const summary = unsupportedLoadClaim.test(feedback.summary)
+    ? "The page exposed meaningful visible content during the run. Findings below are limited to behavior supported by the recorded DOM evidence."
+    : feedback.summary;
+  const limitations = findings.length === feedback.findings.length
+    ? feedback.limitations
+    : [...feedback.limitations, "An unsupported content-loading claim was omitted because recorded DOM evidence showed meaningful content."];
+  return { ...feedback, summary, findings, limitations };
 }
 
 export function normalizeFeedback(value) {

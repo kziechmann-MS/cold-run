@@ -1,5 +1,5 @@
 import { chromium } from "playwright";
-import { mkdir } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { personaPrompt } from "./llm.js";
 import { validateTargetUrl } from "./target-validation.js";
@@ -17,16 +17,23 @@ export async function runBrowserAgent({
   launch = (options) => chromium.launch(options),
 }) {
   await mkdir(outputDirectory, { recursive: true });
-  const browser = await launch({ headless: true });
   const evidence = [];
   const consoleIssues = [];
+  const errors = [];
+  const videoDirectory = path.join(outputDirectory, ".video");
+  let browser;
+  let context;
+  let page;
+  let videoName = null;
 
   try {
-    const context = await browser.newContext({
+    browser = await launch({ headless: true });
+    context = await browser.newContext({
       viewport: { width: 1440, height: 900 },
       userAgent: "Cold Run UX research agent",
+      recordVideo: { dir: videoDirectory, size: { width: 1440, height: 900 } },
     });
-    const page = await context.newPage();
+    page = await context.newPage();
     await page.route("**/*", async (route) => {
       if (!route.request().isNavigationRequest()) return route.continue();
       try {
@@ -51,24 +58,42 @@ export async function runBrowserAgent({
       const screenshot = `step-${String(step + 1).padStart(2, "0")}.png`;
       await page.screenshot({ path: path.join(outputDirectory, screenshot), fullPage: true });
 
-      const decision = normalizeDecision(
-        await llm.complete(
-          `${personaPrompt(persona)}\n\n${DECISION_INSTRUCTIONS}`,
-          JSON.stringify({ currentPage: observation, priorEvidence: evidence.slice(-5) }),
-        ),
-        observation.elements,
-      );
       const entry = {
         step: step + 1,
         timestamp: new Date().toISOString(),
         page: { url: page.url(), title: observation.title },
         screenshot,
+        rawObservation: summarizeObservation(observation),
+      };
+      evidence.push(entry);
+      let decision;
+      try {
+        decision = applyWaitPolicy(
+          normalizeDecision(
+            await llm.complete(
+              `${personaPrompt(persona)}\n\n${DECISION_INSTRUCTIONS}`,
+              JSON.stringify({ currentPage: observation, priorEvidence: evidence.slice(-6, -1) }),
+            ),
+            observation.elements,
+          ),
+          evidence.slice(0, -1),
+          observation,
+        );
+      } catch (error) {
+        entry.action = "finish";
+        entry.reason = "The model provider could not choose the next action.";
+        entry.observation = "Exploration stopped with the evidence collected so far.";
+        entry.result = "failed";
+        entry.error = safeError(error);
+        errors.push(entry.error);
+        break;
+      }
+      Object.assign(entry, {
         action: decision.action,
         target: decision.target || null,
         reason: decision.reason,
         observation: decision.observation,
-      };
-      evidence.push(entry);
+      });
       if (decision.action === "finish") break;
 
       try {
@@ -77,14 +102,27 @@ export async function runBrowserAgent({
         entry.result = "completed";
       } catch (error) {
         entry.result = "failed";
-        entry.error = error.message.slice(0, 300);
+        entry.error = safeError(error).slice(0, 300);
       }
     }
-    await context.close();
+  } catch (error) {
+    errors.push(safeError(error));
   } finally {
-    await browser.close();
+    const video = page?.video();
+    if (context) await context.close().catch(() => {});
+    if (video) {
+      try {
+        videoName = "run.webm";
+        await video.saveAs(path.join(outputDirectory, videoName));
+      } catch (error) {
+        videoName = null;
+        errors.push(safeError(error));
+      }
+    }
+    await rm(videoDirectory, { recursive: true, force: true }).catch(() => {});
+    if (browser) await browser.close().catch(() => {});
   }
-  return { evidence, consoleIssues };
+  return { evidence, consoleIssues, errors, video: videoName };
 }
 
 async function observe(page) {
@@ -118,6 +156,33 @@ async function observe(page) {
   });
 }
 
+function summarizeObservation(observation) {
+  return {
+    title: observation.title,
+    url: observation.url,
+    headings: observation.headings,
+    textExcerpt: observation.text,
+    visibleTextLength: observation.text.length,
+    visibleInteractiveElementCount: observation.elements.length,
+  };
+}
+
+export function applyWaitPolicy(decision, priorEvidence, observation) {
+  if (decision.action !== "wait" || priorEvidence.at(-1)?.action !== "wait") return decision;
+  if (observation.text.length || observation.elements.length) {
+    return {
+      action: "scroll",
+      reason: "Visible content exists, so continue exploring instead of waiting again.",
+      observation: decision.observation,
+    };
+  }
+  return {
+    action: "finish",
+    reason: "The page remained empty after waiting; finish with partial findings.",
+    observation: decision.observation,
+  };
+}
+
 export function normalizeDecision(value, elements) {
   const allowed = new Set(["click", "fill", "scroll", "wait", "finish"]);
   const action = allowed.has(value?.action) ? value.action : "finish";
@@ -149,4 +214,8 @@ async function performAction(page, decision) {
 
 function text(value) {
   return typeof value === "string" ? value : "";
+}
+
+function safeError(error) {
+  return (error?.message || "The browser run failed.").slice(0, 500);
 }

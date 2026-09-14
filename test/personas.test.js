@@ -4,6 +4,7 @@ import { personas, resolvePersona } from "../src/personas.js";
 
 test("resolves a preset persona", () => {
   assert.equal(resolvePersona(personas[0].id).name, personas[0].name);
+  assert.equal(personas[0].id, "subject-matter-expert");
 });
 
 test("normalizes a complete custom persona", () => {

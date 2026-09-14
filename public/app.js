@@ -40,7 +40,9 @@ form.addEventListener("submit", async (event) => {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error);
     renderReport(result);
-    status.textContent = "Run complete.";
+    status.textContent = result.status === "complete"
+      ? "Run complete."
+      : `Run ${result.status}. ${result.errors?.join(" ") || "Review the preserved evidence."}`;
   } catch (error) {
     status.textContent = error.message || "The run could not be completed.";
   } finally {
@@ -52,6 +54,10 @@ function renderReport(report) {
   document.querySelector("#report-title").textContent = `${report.persona.name} on ${new URL(report.url).hostname}`;
   document.querySelector("#sentiment").textContent = report.analysis.sentiment;
   document.querySelector("#summary").textContent = report.analysis.summary;
+  document.querySelector("#artifacts").innerHTML = `<a href="${report.artifacts.json}" target="_blank">JSON report</a> · <a href="${report.artifacts.markdown}" target="_blank">Markdown report</a>`;
+  const recording = document.querySelector("#recording");
+  recording.hidden = !report.video;
+  if (report.video) recording.src = report.video;
   document.querySelector("#findings").replaceChildren(...report.analysis.findings.map((finding) => {
     const article = document.createElement("article");
     article.innerHTML = `<span class="severity ${finding.severity}">${escape(finding.severity)}</span><h4>${escape(finding.title)}</h4><p>${escape(finding.evidence)}</p><strong>Try this</strong><p>${escape(finding.recommendation)}</p>`;

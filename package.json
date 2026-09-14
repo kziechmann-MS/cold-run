@@ -6,6 +6,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
+    "start:github": "node src/start-github.js",
     "test": "node --test",
     "check": "node --check src/server.js && node --test"
   },
@@ -18,9 +19,6 @@
   "license": "MIT",
   "engines": {
     "node": ">=20"
-  },
-  "dependencies": {
-    "playwright": "1.63.0"
   },
   "dependencies": {
     "playwright": "^1.63.0"

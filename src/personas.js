@@ -1,10 +1,10 @@
 export const personas = Object.freeze([
   {
-    id: "first-time-founder",
-    name: "First-time founder",
-    description: "Time-poor, commercially focused, and comfortable with common SaaS tools.",
-    goals: "Understand the value quickly and find the fastest path to trying the product.",
-    traits: ["impatient", "pragmatic", "moderately technical"],
+    id: "subject-matter-expert",
+    name: "Subject-matter expert",
+    description: "An experienced domain specialist evaluating whether a product supports real work.",
+    goals: "Validate accuracy, depth, and fit with established domain workflows.",
+    traits: ["knowledgeable", "detail-oriented", "pragmatic"],
   },
   {
     id: "cautious-consumer",
