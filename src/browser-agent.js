@@ -2,6 +2,7 @@ import { chromium } from "playwright";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { personaPrompt } from "./llm.js";
+import { validateTargetUrl } from "./target-validation.js";
 
 const DECISION_INSTRUCTIONS = `Choose exactly one next action based on the page observation and prior evidence.
 Return JSON: {"action":"click|fill|scroll|wait|finish","target":"e1","text":"","reason":"short persona-based reason","observation":"what the persona notices"}.
@@ -26,6 +27,15 @@ export async function runBrowserAgent({
       userAgent: "Cold Run UX research agent",
     });
     const page = await context.newPage();
+    await page.route("**/*", async (route) => {
+      if (!route.request().isNavigationRequest()) return route.continue();
+      try {
+        await validateTargetUrl(route.request().url());
+        return route.continue();
+      } catch {
+        return route.abort("blockedbyclient");
+      }
+    });
     page.on("console", (message) => {
       if (["error", "warning"].includes(message.type())) {
         consoleIssues.push({ type: message.type(), text: message.text().slice(0, 500) });
